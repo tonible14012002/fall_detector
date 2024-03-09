@@ -1,3 +1,5 @@
+
+fall_detector/detection/models_pth/*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

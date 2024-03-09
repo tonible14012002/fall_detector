@@ -60,7 +60,7 @@ def draw_keypoints(frame, keypoints, confidence_threshold):
     shaped = np.squeeze(np.multiply(keypoints, [y, x, 1]))
 
     for kp in shaped:
-        ky, kx, kp_conf = kp
+        kx, ky, kp_conf = kp
         if kp_conf > confidence_threshold:
             cv2.circle(frame, (int(kx), int(ky)), 1, (0, 255, 0), -1)
 
@@ -71,8 +71,8 @@ def draw_connections(frame, keypoints, edges, confidence_threshold):
 
     for edge, color in edges.items():
         p1, p2 = edge
-        y1, x1, c1 = shaped[p1]
-        y2, x2, c2 = shaped[p2]
+        x1, y1, c1 = shaped[p1]
+        x2, y2, c2 = shaped[p2]
 
         if (c1 > confidence_threshold) & (c2 > confidence_threshold):
             cv2.line(
@@ -85,6 +85,7 @@ class PoseEstimator:
         assert is_valid_size(sizeX, sizeY), "Invalid size for detection model."
         self.size = (sizeX, sizeY)
         self.model = None
+        self.poses = None
 
     def load_model(self):
         self.model = tf_hub.load(
@@ -92,12 +93,16 @@ class PoseEstimator:
         ).signatures["serving_default"]
 
     def cast_to_tf_tensor(self, image):
+        """
+        cast cv2 image to tf tensor with resized to detection size
+        """
         return cast_cv2_img_to_tf_tensor(image, self.size)
 
     def detect(self, pose_input, body_only=True):
         """
-        tensor shape 6, 17 ,3 (poses, keypoints, y, x, confidence)
-        body_only: bool => remove keypoints from eyes, ears
+        pose_input = tensor image
+        body_only: bool -> cut eyes, ears
+        return: tensor (6, 17, 3) - (poses), (keypoints), (y, x, confidence)
         """
         assert self.model is not None, "Model not loaded."
         results = self.model(pose_input)
@@ -106,4 +111,22 @@ class PoseEstimator:
             keypoints = tf.concat(
                 [keypoints[:, :1, :], keypoints[:, 5:, :]], axis=1
             )
+        self.poses = keypoints
         return keypoints
+
+    def get_poses(self):
+        """
+        get current state poses
+        """
+        return self.poses[:, :, [1, 0, 2]]  # x, y, confidence
+
+    def filter_poses(self, threshold=0.2):
+        assert self.poses is not None
+        self.poses
+        scores = self.poses[:, :, 2]
+        mean_score_each = tf.reduce_mean(scores, axis=1)
+        mask_above_threshold = mean_score_each > threshold
+
+        self.poses = tf.boolean_mask(
+            self.poses, mask_above_threshold, axis=0
+        ).numpy()

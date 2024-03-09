@@ -169,7 +169,9 @@ def get_batch_statistics(outputs, targets, iou_threshold):
                 if pred_label not in target_labels:
                     continue
 
-                iou, box_index = bbox_iou(pred_box.unsqueeze(0), target_boxes).max(0)
+                iou, box_index = bbox_iou(
+                    pred_box.unsqueeze(0), target_boxes
+                ).max(0)
                 if iou >= iou_threshold and box_index not in detected_boxes:
                     true_positives[pred_i] = 1
                     detected_boxes += [box_index]
@@ -198,8 +200,18 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
         b2_y1, b2_y2 = box2[:, 1] - box2[:, 3] / 2, box2[:, 1] + box2[:, 3] / 2
     else:
         # Get the coordinates of bounding boxes
-        b1_x1, b1_y1, b1_x2, b1_y2 = box1[:, 0], box1[:, 1], box1[:, 2], box1[:, 3]
-        b2_x1, b2_y1, b2_x2, b2_y2 = box2[:, 0], box2[:, 1], box2[:, 2], box2[:, 3]
+        b1_x1, b1_y1, b1_x2, b1_y2 = (
+            box1[:, 0],
+            box1[:, 1],
+            box1[:, 2],
+            box1[:, 3],
+        )
+        b2_x1, b2_y1, b2_x2, b2_y2 = (
+            box2[:, 0],
+            box2[:, 1],
+            box2[:, 2],
+            box2[:, 3],
+        )
 
     # get the corrdinates of the intersection rectangle
     inter_rect_x1 = torch.max(b1_x1, b2_x1)
@@ -207,9 +219,9 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
     inter_rect_x2 = torch.min(b1_x2, b2_x2)
     inter_rect_y2 = torch.min(b1_y2, b2_y2)
     # Intersection area
-    inter_area = torch.clamp(inter_rect_x2 - inter_rect_x1 + 1, min=0) * torch.clamp(
-        inter_rect_y2 - inter_rect_y1 + 1, min=0
-    )
+    inter_area = torch.clamp(
+        inter_rect_x2 - inter_rect_x1 + 1, min=0
+    ) * torch.clamp(inter_rect_y2 - inter_rect_y1 + 1, min=0)
     # Union Area
     b1_area = (b1_x2 - b1_x1 + 1) * (b1_y2 - b1_y1 + 1)
     b2_area = (b2_x2 - b2_x1 + 1) * (b2_y2 - b2_y1 + 1)
@@ -247,7 +259,8 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
         keep_boxes = []
         while detections.size(0):
             large_overlap = (
-                bbox_iou(detections[0, :4].unsqueeze(0), detections[:, :4]) > nms_thres
+                bbox_iou(detections[0, :4].unsqueeze(0), detections[:, :4])
+                > nms_thres
             )
             label_match = detections[0, -1] == detections[:, -1]
             # Indices of boxes with lower confidence scores, large IOUs and matching labels
@@ -266,8 +279,12 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
 
 
 def build_targets(pred_boxes, pred_cls, target, anchors, ignore_thres):
-    ByteTensor = torch.cuda.ByteTensor if pred_boxes.is_cuda else torch.ByteTensor
-    FloatTensor = torch.cuda.FloatTensor if pred_boxes.is_cuda else torch.FloatTensor
+    ByteTensor = (
+        torch.cuda.ByteTensor if pred_boxes.is_cuda else torch.ByteTensor
+    )
+    FloatTensor = (
+        torch.cuda.FloatTensor if pred_boxes.is_cuda else torch.FloatTensor
+    )
 
     nB = pred_boxes.size(0)
     nA = pred_boxes.size(1)
@@ -322,7 +339,18 @@ def build_targets(pred_boxes, pred_cls, target, anchors, ignore_thres):
     )
 
     tconf = obj_mask.float()
-    return iou_scores, class_mask, obj_mask, noobj_mask, tx, ty, tw, th, tcls, tconf
+    return (
+        iou_scores,
+        class_mask,
+        obj_mask,
+        noobj_mask,
+        tx,
+        ty,
+        tw,
+        th,
+        tcls,
+        tconf,
+    )
 
 
 def parse_model_config(path):
@@ -330,7 +358,9 @@ def parse_model_config(path):
     file = open(path, "r")
     lines = file.read().split("\n")
     lines = [x for x in lines if x and not x.startswith("#")]
-    lines = [x.rstrip().lstrip() for x in lines]  # get rid of fringe whitespaces
+    lines = [
+        x.rstrip().lstrip() for x in lines
+    ]  # get rid of fringe whitespaces
     module_defs = []
     for line in lines:
         if line.startswith("["):  # This marks the start of a new block
@@ -389,7 +419,9 @@ def ResizePadding(height, width):
         top, bottom = delta_h // 2, delta_h - (delta_h // 2)
         left, right = delta_w // 2, delta_w - (delta_w // 2)
 
-        image = cv2.copyMakeBorder(image, top, bottom, left, right, cv2.BORDER_CONSTANT)
+        image = cv2.copyMakeBorder(
+            image, top, bottom, left, right, cv2.BORDER_CONSTANT
+        )
         return image
 
     return resizePadding
@@ -409,12 +441,16 @@ class AverageValueMeter(object):
         if self.n == 0:
             self.mean, self.std = np.nan, np.nan
         elif self.n == 1:
-            self.mean = 0.0 + self.sum  # This is to force a copy in torch/numpy
+            self.mean = (
+                0.0 + self.sum
+            )  # This is to force a copy in torch/numpy
             self.std = np.inf
             self.mean_old = self.mean
             self.m_s = 0.0
         else:
-            self.mean = self.mean_old + (value - n * self.mean_old) / float(self.n)
+            self.mean = self.mean_old + (value - n * self.mean_old) / float(
+                self.n
+            )
             self.m_s += (value - self.mean_old) * (value - self.mean)
             self.mean_old = self.mean
             self.std = np.sqrt(self.m_s / (self.n - 1.0))
@@ -431,3 +467,167 @@ class AverageValueMeter(object):
         self.mean_old = 0.0
         self.m_s = 0.0
         self.std = np.nan
+
+
+### Reference from: https://github.com/yysijie/st-gcn/blob/master/net/utils/graph.py
+class Graph:
+    """The Graph to model the skeletons extracted by the Alpha-Pose.
+    Args:
+        - strategy: (string) must be one of the follow candidates
+            - uniform: Uniform Labeling,
+            - distance: Distance Partitioning,
+            - spatial: Spatial Configuration,
+        For more information, please refer to the section 'Partition Strategies'
+            in our paper (https://arxiv.org/abs/1801.07455).
+        - layout: (string) must be one of the follow candidates
+            - coco_cut: Is COCO format but cut 4 joints (L-R ears, L-R eyes) out.
+        - max_hop: (int) the maximal distance between two connected nodes.
+        - dilation: (int) controls the spacing between the kernel points.
+    """
+
+    def __init__(
+        self, layout="coco_cut", strategy="uniform", max_hop=1, dilation=1
+    ):
+        self.max_hop = max_hop
+        self.dilation = dilation
+
+        self.get_edge(layout)
+        self.hop_dis = get_hop_distance(self.num_node, self.edge, max_hop)
+        self.get_adjacency(strategy)
+
+    def get_edge(self, layout):
+        if layout == "coco_cut":
+            self.num_node = 14
+            self_link = [(i, i) for i in range(self.num_node)]
+            neighbor_link = [
+                (6, 4),
+                (4, 2),
+                (2, 13),
+                (13, 1),
+                (5, 3),
+                (3, 1),
+                (12, 10),
+                (10, 8),
+                (8, 2),
+                (11, 9),
+                (9, 7),
+                (7, 1),
+                (13, 0),
+            ]
+            self.edge = self_link + neighbor_link
+            self.center = 13
+        else:
+            raise ValueError("This layout is not supported!")
+
+    def get_adjacency(self, strategy):
+        valid_hop = range(0, self.max_hop + 1, self.dilation)
+        adjacency = np.zeros((self.num_node, self.num_node))
+        for hop in valid_hop:
+            adjacency[self.hop_dis == hop] = 1
+        normalize_adjacency = normalize_digraph(adjacency)
+
+        if strategy == "uniform":
+            A = np.zeros((1, self.num_node, self.num_node))
+            A[0] = normalize_adjacency
+            self.A = A
+        elif strategy == "distance":
+            A = np.zeros((len(valid_hop), self.num_node, self.num_node))
+            for i, hop in enumerate(valid_hop):
+                A[i][self.hop_dis == hop] = normalize_adjacency[
+                    self.hop_dis == hop
+                ]
+            self.A = A
+        elif strategy == "spatial":
+            A = []
+            for hop in valid_hop:
+                a_root = np.zeros((self.num_node, self.num_node))
+                a_close = np.zeros((self.num_node, self.num_node))
+                a_further = np.zeros((self.num_node, self.num_node))
+                for i in range(self.num_node):
+                    for j in range(self.num_node):
+                        if self.hop_dis[j, i] == hop:
+                            if (
+                                self.hop_dis[j, self.center]
+                                == self.hop_dis[i, self.center]
+                            ):
+                                a_root[j, i] = normalize_adjacency[j, i]
+                            elif (
+                                self.hop_dis[j, self.center]
+                                > self.hop_dis[i, self.center]
+                            ):
+                                a_close[j, i] = normalize_adjacency[j, i]
+                            else:
+                                a_further[j, i] = normalize_adjacency[j, i]
+                if hop == 0:
+                    A.append(a_root)
+                else:
+                    A.append(a_root + a_close)
+                    A.append(a_further)
+            A = np.stack(A)
+            self.A = A
+            # self.A = np.swapaxes(np.swapaxes(A, 0, 1), 1, 2)
+        else:
+            raise ValueError("This strategy is not supported!")
+
+
+def get_hop_distance(num_node, edge, max_hop=1):
+    A = np.zeros((num_node, num_node))
+    for i, j in edge:
+        A[j, i] = 1
+        A[i, j] = 1
+
+    # compute hop steps
+    hop_dis = np.zeros((num_node, num_node)) + np.inf
+    transfer_mat = [np.linalg.matrix_power(A, d) for d in range(max_hop + 1)]
+    arrive_mat = np.stack(transfer_mat) > 0
+    for d in range(max_hop, -1, -1):
+        hop_dis[arrive_mat[d]] = d
+    return hop_dis
+
+
+def normalize_digraph(A):
+    Dl = np.sum(A, 0)
+    num_node = A.shape[0]
+    Dn = np.zeros((num_node, num_node))
+    for i in range(num_node):
+        if Dl[i] > 0:
+            Dn[i, i] = Dl[i] ** (-1)
+    AD = np.dot(A, Dn)
+    return AD
+
+
+def normalize_undigraph(A):
+    Dl = np.sum(A, 0)
+    num_node = A.shape[0]
+    Dn = np.zeros((num_node, num_node))
+    for i in range(num_node):
+        if Dl[i] > 0:
+            Dn[i, i] = Dl[i] ** (-0.5)
+    DAD = np.dot(np.dot(Dn, A), Dn)
+    return DAD
+
+
+def normalize_points_with_size(xy, width, height, flip=False):
+    """Normalize scale points in image with size of image to (0-1).
+    xy : (frames, parts, xy) or (parts, xy)
+    """
+    if xy.ndim == 2:
+        xy = np.expand_dims(xy, 0)
+    xy[:, :, 0] /= width
+    xy[:, :, 1] /= height
+    if flip:
+        xy[:, :, 0] = 1 - xy[:, :, 0]
+    return xy
+
+
+def scale_pose(xy):
+    """Normalize pose points by scale with max/min value of each pose.
+    xy : (frames, parts, xy) or (parts, xy)
+    """
+    if xy.ndim == 2:
+        xy = np.expand_dims(xy, 0)
+    xy_min = np.nanmin(xy, axis=1)
+    xy_max = np.nanmax(xy, axis=1)
+    for i in range(xy.shape[0]):
+        xy[i] = ((xy[i] - xy_min[i]) / (xy_max[i] - xy_min[i])) * 2 - 1
+    return xy.squeeze()
