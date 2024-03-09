@@ -34,8 +34,14 @@ def get_parsed_args():
     par.add_argument(
         "--detection_input_size",
         type=int,
-        default=384,
+        default=256,
         help="Size of input in detection model in square must be divisible by 32 (int).",
+    )
+    par.add_argument(
+        "--device",
+        type=str,
+        default="cuda",
+        help="Device to run model on cpu or cuda.",
     )
 
     args = par.parse_args()
@@ -43,16 +49,34 @@ def get_parsed_args():
 
     cam_source = args.camera
     return {
-        "cam_source": cam_source,
-        "detection_input_size": inp_dets,
+        "cam_source": cam_source,  # 0 or path to video file
+        "detection_input_size": inp_dets,  # 256
+        "device": args.device,  # cuda or cpu
     }
+
+
+def initialize_detection():
+    # Initialize pose estimator
+    pose_estimator = pose.PoseEstimator(
+        sizeX=detection_size, sizeY=detection_size
+    )
+    pose_estimator.load_model()
+
+    # Initialize tracker
+    tracker = Tracker(max_age=30, max_iou_distance=0.7, n_init=3)
+
+    # Initialize action detector
+    action_detector = detector.TSSTG(device=device)
+    return pose_estimator, tracker, action_detector
 
 
 if __name__ == "__main__":
 
     args = get_parsed_args()
+
     cam_source = args["cam_source"]
     detection_size = args["detection_input_size"]
+    device = args["device"]
 
     if type(cam_source) is str and os.path.isfile(cam_source):
         # Use loader thread with Q for video file.
@@ -70,17 +94,7 @@ if __name__ == "__main__":
     frame_count = 0
 
     # Initialize pose estimator
-    pose_estimator = pose.PoseEstimator(
-        sizeX=detection_size, sizeY=detection_size
-    )
-    pose_estimator.load_model()
-
-    # Initialize tracker
-    max_age = 30
-    tracker = Tracker(max_age=30, max_iou_distance=0.7, n_init=3)
-
-    # Initialize action detector
-    action_detector = detector.TSSTG(device="cpu")
+    pose_estimator, tracker, action_detector = initialize_detection()
 
     while cam.grabbed():
         frame = cam.getitem()
@@ -93,20 +107,23 @@ if __name__ == "__main__":
         )  # cut eyes, ears -> 13 keypoinst
         pose_estimator.filter_poses(0.3)  # filter low confidence poses
         poses = pose_estimator.get_poses()  # y, x, confidence
-        total_poses = len(poses)
+        bboxs = [
+            tracker_utils.kpt2bbox_tf(
+                ps, 20, (frame.shape[1], frame.shape[0])
+            ).numpy()
+            for ps in poses
+        ]
 
         # TRACK POSES
         tracker.predict()
 
         detections = [
             Detection(
-                tracker_utils.kpt2bbox_tf(
-                    ps, 20, frame_size=(frame.shape[1], frame.shape[0])
-                ).numpy(),
+                bbox,
                 ps,
                 tf.reduce_mean(ps[:, 2]),
             )
-            for ps in poses
+            for ps, bbox in zip(poses, bboxs)
         ]
 
         tracker.update(detections)
@@ -124,6 +141,7 @@ if __name__ == "__main__":
             if len(track.keypoints_list) == 30:
                 pts = np.array(track.keypoints_list, dtype=np.float32)
                 out = action_detector.predict(pts, image.shape[:2])
+                print(out)
                 action_name = action_detector.class_names[out[0].argmax()]
                 action = "{}: {:.2f}%".format(action_name, out[0].max() * 100)
                 if action_name == "Fall Down":
@@ -131,6 +149,7 @@ if __name__ == "__main__":
                 elif action_name == "Lying Down":
                     clr = (255, 200, 0)
 
+            # RENDER BBOX
             if track.time_since_update == 0:
                 frame = cv2.rectangle(
                     frame,
@@ -159,8 +178,7 @@ if __name__ == "__main__":
                 )
 
         # RENDER STATE
-        pose.loop_through_people(frame, poses, 0)
-
+        frame = cv2.resize(frame, (0, 0), fx=2.0, fy=2.0)
         frame = cv2.putText(
             frame,
             "%d, FPS: %f" % (frame_count, 1.0 / (time.time() - fps_time)),

@@ -82,7 +82,7 @@ def draw_connections(frame, keypoints, edges, confidence_threshold):
 
 class PoseEstimator:
     def __init__(self, sizeX, sizeY) -> None:
-        assert is_valid_size(sizeX, sizeY), "Invalid size for detection model."
+        # assert is_valid_size(sizeX, sizeY), "Invalid size for detection model."
         self.size = (sizeX, sizeY)
         self.model = None
         self.poses = None
@@ -104,7 +104,7 @@ class PoseEstimator:
         body_only: bool -> cut eyes, ears
         return: tensor (6, 17, 3) - (poses), (keypoints), (y, x, confidence)
         """
-        assert self.model is not None, "Model not loaded."
+        # assert self.model is not None, "Model not loaded."
         results = self.model(pose_input)
         keypoints = results["output_0"].numpy()[:, :, :51].reshape((6, 17, 3))
         if body_only:
@@ -118,10 +118,11 @@ class PoseEstimator:
         """
         get current state poses
         """
+        # return self.poses
         return self.poses[:, :, [1, 0, 2]]  # x, y, confidence
 
     def filter_poses(self, threshold=0.2):
-        assert self.poses is not None
+        # assert self.poses is not None
         self.poses
         scores = self.poses[:, :, 2]
         mean_score_each = tf.reduce_mean(scores, axis=1)
