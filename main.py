@@ -1,4 +1,4 @@
-from lib.cam import CamLoader, CamLoader_Q
+from utils.cam import CamLoader, CamLoader_Q
 from fall_detector.detection import utils
 from fall_detector import pose
 from fall_detector.tracker import Tracker, Detection, utils as tracker_utils
