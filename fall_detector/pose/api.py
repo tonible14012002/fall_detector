@@ -79,6 +79,7 @@ def draw_connections(frame, keypoints, edges, confidence_threshold):
                 frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 4
             )
 
+import shutil
 
 class PoseEstimator:
     def __init__(self, sizeX, sizeY) -> None:
@@ -88,6 +89,11 @@ class PoseEstimator:
         self.poses = None
 
     def load_model(self):
+        # Path to the model directory
+        model_dir = "C:\\Users\\Hi\\AppData\\Local\\Temp\\tfhub_modules\\312f001449331ee3d410d758fccdc9945a65dbc3"
+
+        # Delete the directory
+        shutil.rmtree(model_dir)
         self.model = tf_hub.load(
             "https://tfhub.dev/google/movenet/multipose/lightning/1"
         ).signatures["serving_default"]
