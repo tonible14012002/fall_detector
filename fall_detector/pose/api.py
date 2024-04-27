@@ -90,12 +90,12 @@ class PoseEstimator:
 
     def load_model(self):
         # Path to the model directory
-        model_dir = "C:\\Users\\Hi\\AppData\\Local\\Temp\\tfhub_modules\\312f001449331ee3d410d758fccdc9945a65dbc3"
+        # model_dir = "C:\\Users\\Hi\\AppData\\Local\\Temp\\tfhub_modules\\312f001449331ee3d410d758fccdc9945a65dbc3"
 
-        # Delete the directory
-        shutil.rmtree(model_dir)
+        # # Delete the directory
+        # shutil.rmtree(model_dir)
         self.model = tf_hub.load(
-            "https://tfhub.dev/google/movenet/multipose/lightning/1"
+            "https://tfhub.dev/google/movenet/multipose/lightning/2"
         ).signatures["serving_default"]
 
     def cast_to_tf_tensor(self, image):

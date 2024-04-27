@@ -9,6 +9,8 @@ import os
 import time
 import tensorflow as tf
 import numpy as np
+import asyncio
+
 
 DEFAULT_CAMERA_SOURCE = ".scripts/samples/fall-vid.mp4"
 
@@ -55,12 +57,12 @@ def get_parsed_args():
     }
 
 
-def initialize_detection():
+def initialize_detection(detection_size, device):
     # Initialize pose estimator
     pose_estimator = pose.PoseEstimator(
         sizeX=detection_size, sizeY=detection_size
     )
-    pose_estimator.load_model()
+    # pose_estimator.load_model()
 
     # Initialize tracker
     tracker = Tracker(max_age=30, max_iou_distance=0.7, n_init=3)
@@ -70,7 +72,7 @@ def initialize_detection():
     return pose_estimator, tracker, action_detector
 
 
-if __name__ == "__main__":
+async def main():
 
     args = get_parsed_args()
 
@@ -94,7 +96,7 @@ if __name__ == "__main__":
     frame_count = 0
 
     # Initialize pose estimator
-    pose_estimator, tracker, action_detector = initialize_detection()
+    pose_estimator, tracker, action_detector = initialize_detection(detection_size, device)
 
     while cam.grabbed():
         frame = cam.getitem()
@@ -102,31 +104,31 @@ if __name__ == "__main__":
 
         # DETECTION
         pose_input = pose_estimator.cast_to_tf_tensor(image)
-        pose_estimator.detect(
-            pose_input, body_only=True
-        )  # cut eyes, ears -> 13 keypoinst
-        pose_estimator.filter_poses(0.3)  # filter low confidence poses
-        poses = pose_estimator.get_poses()  # y, x, confidence
-        bboxs = [
-            tracker_utils.kpt2bbox_tf(
-                ps, 20, (frame.shape[1], frame.shape[0])
-            ).numpy()
-            for ps in poses
-        ]
+        # pose_estimator.detect(
+        #     pose_input, body_only=True
+        # )  # cut eyes, ears -> 13 keypoinst
+        # pose_estimator.filter_poses(0.3)  # filter low confidence poses
+        # poses = pose_estimator.get_poses()  # y, x, confidence
+        # bboxs = [
+        #     tracker_utils.kpt2bbox_tf(
+        #         ps, 20, (frame.shape[1], frame.shape[0])
+        #     ).numpy()
+        #     for ps in poses
+        # ]
 
         # TRACK POSES
         tracker.predict()
 
-        detections = [
-            Detection(
-                bbox,
-                ps,
-                tf.reduce_mean(ps[:, 2]),
-            )
-            for ps, bbox in zip(poses, bboxs)
-        ]
+        # detections = [
+        #     Detection(
+        #         bbox,
+        #         ps,
+        #         tf.reduce_mean(ps[:, 2]),
+        #     )
+        #     for ps, bbox in zip(poses, bboxs)
+        # ]
 
-        tracker.update(detections)
+        # tracker.update(detections)
 
         # ACTION DETECTOR
         for i, track in enumerate(tracker.tracks):
@@ -199,3 +201,6 @@ if __name__ == "__main__":
 
     cam.stop()
     cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    asyncio.run(main())
