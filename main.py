@@ -1,16 +1,16 @@
 from utils.cam import CamLoader, CamLoader_Q
 from fall_detector.detection import utils
 from fall_detector import pose
+from fall_detector import YoloBasedPoseEstimator
 from fall_detector.tracker import Tracker, Detection, utils as tracker_utils
 from fall_detector.detection import detector
 import argparse
 import cv2
 import os
 import time
-import tensorflow as tf
 import numpy as np
 
-DEFAULT_CAMERA_SOURCE = ".scripts/samples/fall-vid.mp4"
+DEFAULT_CAMERA_SOURCE = "./scripts/samples/fall-vid.mp4"
 
 
 def preproc(image):
@@ -40,7 +40,7 @@ def get_parsed_args():
     par.add_argument(
         "--device",
         type=str,
-        default="cuda",
+        default="cpu",
         help="Device to run model on cpu or cuda.",
     )
 
@@ -57,10 +57,7 @@ def get_parsed_args():
 
 def initialize_detection():
     # Initialize pose estimator
-    pose_estimator = pose.PoseEstimator(
-        sizeX=detection_size, sizeY=detection_size
-    )
-    pose_estimator.load_model()
+    pose_estimator = YoloBasedPoseEstimator()
 
     # Initialize tracker
     tracker = Tracker(max_age=30, max_iou_distance=0.7, n_init=3)
@@ -101,18 +98,31 @@ if __name__ == "__main__":
         image = frame.copy()
 
         # DETECTION
-        pose_input = pose_estimator.cast_to_tf_tensor(image)
-        pose_estimator.detect(
-            pose_input, body_only=True
-        )  # cut eyes, ears -> 13 keypoinst
-        pose_estimator.filter_poses(0.3)  # filter low confidence poses
-        poses = pose_estimator.get_poses()  # y, x, confidence
+        # pose_input = pose_estimator.cast_to_tf_tensor(image)
+        # pose_estimator.detect(
+        #     pose_input, body_only=True
+        # )  # cut eyes, ears -> 13 keypoinst
+        # pose_estimator.filter_poses(0.3)  # filter low confidence poses
+        # poses = pose_estimator.get_poses()  # y, x, confidence
+        poses = pose_estimator.get_poses(image)
+        prediction = poses.prediction
+        print(
+            # prediction.boxes_xyxy,
+            prediction.poses.shape,
+            prediction.scores,
+        )
+        poses = []
+
         bboxs = [
             tracker_utils.kpt2bbox_tf(
                 ps, 20, (frame.shape[1], frame.shape[0])
             ).numpy()
             for ps in poses
         ]
+        try:
+            print("bboxs", bboxs, type(bboxs[0]))
+        except Exception:
+            pass
 
         # TRACK POSES
         tracker.predict()
@@ -121,7 +131,8 @@ if __name__ == "__main__":
             Detection(
                 bbox,
                 ps,
-                tf.reduce_mean(ps[:, 2]),
+                0.3,
+                # store detection including keypoints, bbox and confidence of pose
             )
             for ps, bbox in zip(poses, bboxs)
         ]
@@ -140,6 +151,15 @@ if __name__ == "__main__":
 
             if len(track.keypoints_list) == 30:
                 pts = np.array(track.keypoints_list, dtype=np.float32)
+                print(
+                    "track keypoints:",
+                    track.keypoints_list,
+                    type(track.keypoints_list),
+                    "single ",
+                    type(track.keypoints_list[0]),
+                    type(track.keypoints_list[0].shape),
+                )
+                print("classificating:", pts.shape, type(pts))
                 out = action_detector.predict(pts, image.shape[:2])
                 print(out)
                 action_name = action_detector.class_names[out[0].argmax()]

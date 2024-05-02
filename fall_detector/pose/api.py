@@ -1,7 +1,6 @@
-import tensorflow as tf
-import tensorflow_hub as tf_hub
 import numpy as np
 import cv2
+import os
 
 EDGES = {
     (0, 1): "m",
@@ -26,26 +25,29 @@ def is_valid_size(w, h):
     return w % 32 == 0 and h % 32 == 0
 
 
-def cast_cv2_img_to_tf_tensor(image, size: tuple[int, int]):
+def cast_cv2_img_to_tf_tensor(image, size):
     """
     image: cv2 image
     size: (x, y)
     """
-    return tf.cast(
-        tf.image.resize_with_pad(
-            tf.expand_dims(image, axis=0),
-            target_height=size[1],
-            target_width=size[0],
-        ),
-        dtype=tf.int32,
-    )
+    return image
+    # return tf.cast(
+    #     tf.image.resize_with_pad(
+    #         tf.expand_dims(image, axis=0),
+    #         target_height=size[1],
+    #         target_width=size[0],
+    #     ),
+    #     dtype=tf.int32,
+    # )
 
 
 def load_model():
-    model = tf_hub.load(
-        "https://tfhub.dev/google/movenet/multipose/lightning/1"
-    )
-    return model.signatures["serving_default"]
+    # os.environ["TFHUB_MODEL_LOAD_FORMAT"] = "UNCOMPRESSED"
+    # model = tf_hub.load(
+    #     "https://www.kaggle.com/models/google/movenet/frameworks/TensorFlow2/variations/multipose-lightning/versions/1"
+    # )
+    # return model.signatures["serving_default"]
+    pass
 
 
 # Function to loop through each person detected and render
@@ -88,46 +90,81 @@ class PoseEstimator:
         self.poses = None
 
     def load_model(self):
-        self.model = tf_hub.load(
-            "https://tfhub.dev/google/movenet/multipose/lightning/1"
-        ).signatures["serving_default"]
+        pass
+        # self.model = tf_hub.load s(
+        #     "https://www.kaggle.com/models/google/movenet/TensorFlow2/multipose-lightning/1"
+        # ).signatures["serving_default"]
 
     def cast_to_tf_tensor(self, image):
         """
         cast cv2 image to tf tensor with resized to detection size
         """
-        return cast_cv2_img_to_tf_tensor(image, self.size)
+        tf_tensor = cast_cv2_img_to_tf_tensor(image, self.size)
+        print("##### cast_to_tf_tensor #####")
+        try:
+            print("input type: ", type(image))
+            print("shape: ", image.shape)
+            print("dtype", image.dtype)
+        except Exception as e:
+            print("error: ", e)
+        print("#############################")
+        return tf_tensor
 
     def detect(self, pose_input, body_only=True):
-        """
-        pose_input = tensor image
-        body_only: bool -> cut eyes, ears
-        return: tensor (6, 17, 3) - (poses), (keypoints), (y, x, confidence)
-        """
-        # assert self.model is not None, "Model not loaded."
-        results = self.model(pose_input)
-        keypoints = results["output_0"].numpy()[:, :, :51].reshape((6, 17, 3))
-        if body_only:
-            keypoints = tf.concat(
-                [keypoints[:, :1, :], keypoints[:, 5:, :]], axis=1
-            )
-        self.poses = keypoints
-        return keypoints
+        return []
+        # """
+        # pose_input = tensor image
+        # body_only: bool -> cut eyes, ears
+        # return: tensor (6, 17, 3) - (poses), (keypoints), (y, x, confidence)
+        # """
+        # # assert self.model is not None, "Model not loaded."
+
+        # print("##### detect #####")
+
+        # results = self.model(pose_input)
+
+        # print(
+        #     "result model",
+        #     type(results["output_0"]),
+        #     results["output_0"].shape,
+        # )
+
+        # keypoints = results["output_0"].numpy()[:, :, :51].reshape((6, 17, 3))
+        # if body_only:
+        #     keypoints = tf.concat(
+        #         [keypoints[:, :1, :], keypoints[:, 5:, :]], axis=1
+        #     )
+        # self.poses = keypoints
+
+        # print("keypoints type: ", type(keypoints), keypoints.shape)
+        # print("now self.poses = keypoints")
+        # print("#############################")
+        # return keypoints
 
     def get_poses(self):
-        """
-        get current state poses
-        """
-        # return self.poses
-        return self.poses[:, :, [1, 0, 2]]  # x, y, confidence
+        return []
+        # """
+        # get current state poses
+        # """
+        # # return self.poses
+        # print("##### get_poses #####")
+        # print("same as filter_poses")
+        # print("########################")
+        # return self.poses[:, :, [1, 0, 2]]  # x, y, confidence
 
     def filter_poses(self, threshold=0.2):
+        return []
         # assert self.poses is not None
-        self.poses
-        scores = self.poses[:, :, 2]
-        mean_score_each = tf.reduce_mean(scores, axis=1)
-        mask_above_threshold = mean_score_each > threshold
+        # print("##### filter_poses #####")
+        # self.poses
+        # scores = self.poses[:, :, 2]
+        # mean_score_each = tf.reduce_mean(scores, axis=1)
+        # mask_above_threshold = mean_score_each > threshold
 
-        self.poses = tf.boolean_mask(
-            self.poses, mask_above_threshold, axis=0
-        ).numpy()
+        # self.poses = tf.boolean_mask(
+        #     self.poses, mask_above_threshold, axis=0
+        # ).numpy()
+        # print(
+        #     "result self.poses - ", type(self.poses), "shape", self.poses.shape
+        # )
+        # print("########################")
