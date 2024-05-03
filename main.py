@@ -1,21 +1,24 @@
 from utils.cam import CamLoader, CamLoader_Q
-from fall_detector.detection import utils
-from fall_detector import pose
-from fall_detector import YoloBasedPoseEstimator
-from fall_detector.tracker import Tracker, Detection, utils as tracker_utils
-from fall_detector.detection import detector
+from libs.fall_detector.detection import utils
+from libs.fall_detector.tracker import (
+    Tracker,
+    Detection,
+    utils as tracker_utils,
+)
+from libs.fall_detector.detection import detector
 import argparse
 import cv2
 import os
 import time
 import numpy as np
+from setup import YoloBasedPoseEstimator, draw_poses
 
 DEFAULT_CAMERA_SOURCE = "./scripts/samples/fall-vid.mp4"
 
 
 def preproc(image):
     """preprocess function for CameraLoader."""
-    resizer = utils.ResizePadding(256, 256)
+    resizer = utils.ResizePadding(640, 640)
     image = resizer(image)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     return image
@@ -58,6 +61,7 @@ def get_parsed_args():
 def initialize_detection():
     # Initialize pose estimator
     pose_estimator = YoloBasedPoseEstimator()
+    pose_estimator.set_predictor_device(device=device)
 
     # Initialize tracker
     tracker = Tracker(max_age=30, max_iou_distance=0.7, n_init=3)
@@ -97,32 +101,12 @@ if __name__ == "__main__":
         frame = cam.getitem()
         image = frame.copy()
 
-        # DETECTION
-        # pose_input = pose_estimator.cast_to_tf_tensor(image)
-        # pose_estimator.detect(
-        #     pose_input, body_only=True
-        # )  # cut eyes, ears -> 13 keypoinst
-        # pose_estimator.filter_poses(0.3)  # filter low confidence poses
-        # poses = pose_estimator.get_poses()  # y, x, confidence
-        poses = pose_estimator.get_poses(image)
-        prediction = poses.prediction
-        print(
-            # prediction.boxes_xyxy,
-            prediction.poses.shape,
-            prediction.scores,
-        )
-        poses = []
+        prediction = pose_estimator.get_prediction(image)
 
-        bboxs = [
-            tracker_utils.kpt2bbox_tf(
-                ps, 20, (frame.shape[1], frame.shape[0])
-            ).numpy()
-            for ps in poses
-        ]
-        try:
-            print("bboxs", bboxs, type(bboxs[0]))
-        except Exception:
-            pass
+        poses = prediction.poses
+        bboxs = prediction.bboxes_xyxy
+        scores = prediction.scores
+        print(prediction.edge_links)
 
         # TRACK POSES
         tracker.predict()
@@ -131,10 +115,9 @@ if __name__ == "__main__":
             Detection(
                 bbox,
                 ps,
-                0.3,
-                # store detection including keypoints, bbox and confidence of pose
+                score,
             )
-            for ps, bbox in zip(poses, bboxs)
+            for ps, bbox, score in zip(poses, bboxs, scores)
         ]
 
         tracker.update(detections)
@@ -151,23 +134,22 @@ if __name__ == "__main__":
 
             if len(track.keypoints_list) == 30:
                 pts = np.array(track.keypoints_list, dtype=np.float32)
-                print(
-                    "track keypoints:",
-                    track.keypoints_list,
-                    type(track.keypoints_list),
-                    "single ",
-                    type(track.keypoints_list[0]),
-                    type(track.keypoints_list[0].shape),
-                )
-                print("classificating:", pts.shape, type(pts))
                 out = action_detector.predict(pts, image.shape[:2])
-                print(out)
                 action_name = action_detector.class_names[out[0].argmax()]
                 action = "{}: {:.2f}%".format(action_name, out[0].max() * 100)
                 if action_name == "Fall Down":
                     clr = (255, 0, 0)
                 elif action_name == "Lying Down":
                     clr = (255, 200, 0)
+            if (
+                track.keypoints_list is not None
+                and len(track.keypoints_list) > 0
+            ):
+                draw_poses(
+                    frame=frame,
+                    pose=track.keypoints_list[len(track.keypoints_list) - 1],
+                    detection_size=(640, 640),
+                )
 
             # RENDER BBOX
             if track.time_since_update == 0:
@@ -198,7 +180,7 @@ if __name__ == "__main__":
                 )
 
         # RENDER STATE
-        frame = cv2.resize(frame, (0, 0), fx=2.0, fy=2.0)
+        frame = cv2.resize(frame, (0, 0), fx=1, fy=1)
         frame = cv2.putText(
             frame,
             "%d, FPS: %f" % (frame_count, 1.0 / (time.time() - fps_time)),

@@ -1,4 +1,4 @@
-from fall_detector import YoloPosePredictor
+from libs.fall_detector import YoloPosePredictor
 
 
 predictor = YoloPosePredictor()
