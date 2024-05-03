@@ -106,7 +106,6 @@ if __name__ == "__main__":
         poses = prediction.poses
         bboxs = prediction.bboxes_xyxy
         scores = prediction.scores
-        print(prediction.edge_links)
 
         # TRACK POSES
         tracker.predict()
