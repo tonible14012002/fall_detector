@@ -31,12 +31,12 @@ webcam = None
 USERNAME = "webcam"
 ROOM = "1"
 
-
 async def join_room() -> None:
     print("emit join")
     print(f"username: {USERNAME}, room: {ROOM}")
     await sio.emit("join", {"username": USERNAME, "room": ROOM})
 
+player = MediaPlayer(os.path.join(ROOT, "fall-vid.mp4"))
 
 async def start_server(args) -> None:
     # Connect to the signaling server
@@ -58,7 +58,6 @@ async def start_server(args) -> None:
         config = RTCConfiguration(iceServers=ice_servers)
         pc = RTCPeerConnection(config)
         pcs.add(pc)
-        player = MediaPlayer(os.path.join(ROOT, "fall-vid.mp4"))
         # audio, video = create_local_tracks(args.play_from, args.play_without_decoding)
 
         @pc.on("iceconnectionstatechange")

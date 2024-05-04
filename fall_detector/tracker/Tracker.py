@@ -126,7 +126,7 @@ class Tracker:
         self.tracks = []
         self._next_id = 1
 
-    def predict(self):
+    def predict(self) -> None:
         """Propagate track state distributions one time step forward.
         This function should be called once every time step, before `update`.
         """
