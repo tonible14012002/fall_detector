@@ -58,8 +58,6 @@ class YoloPosePredictor(BasePosePredictor):
         self.device = device
 
     def postprocess(self, result):
-        # result.poses =
-        # Exclude eye, ears, ..., 13 keypoints left
         prediction = result.prediction
 
         keypoints = prediction.poses
@@ -93,11 +91,11 @@ class YoloBasedPoseEstimator(BasedPoseEstimator):
 
 
 def draw_poses(frame, pose, detection_size=(640, 640)):
-    draw_connections(frame, pose, EDGES, detection_size)
-    draw_keypoints(frame, pose, detection_size)
+    _draw_connections(frame, pose, EDGES, detection_size)
+    _draw_keypoints(frame, pose, detection_size)
 
 
-def draw_keypoints(frame, keypoints, detection_size=(640, 640)):
+def _draw_keypoints(frame, keypoints, detection_size=(640, 640)):
     """
     detectionSize: x, y
     """
@@ -110,7 +108,7 @@ def draw_keypoints(frame, keypoints, detection_size=(640, 640)):
         cv2.circle(frame, (int(kx), int(ky)), 1, (0, 255, 0), -1)
 
 
-def draw_connections(frame, keypoints, edges, detection_size=(640, 640)):
+def _draw_connections(frame, keypoints, edges, detection_size=(640, 640)):
     x, y = detection_size
     imgY, imgX, _ = frame.shape
     shaped = np.squeeze(np.multiply(keypoints, [imgY / y, imgX / x, 1]))

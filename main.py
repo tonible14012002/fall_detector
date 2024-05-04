@@ -3,7 +3,6 @@ from libs.fall_detector.detection import utils
 from libs.fall_detector.tracker import (
     Tracker,
     Detection,
-    utils as tracker_utils,
 )
 from libs.fall_detector.detection import detector
 import argparse
@@ -11,7 +10,7 @@ import cv2
 import os
 import time
 import numpy as np
-from setup import YoloBasedPoseEstimator, draw_poses
+from pose_prediction import YoloBasedPoseEstimator, draw_poses
 
 DEFAULT_CAMERA_SOURCE = "./scripts/samples/fall-vid.mp4"
 
@@ -122,7 +121,7 @@ if __name__ == "__main__":
         tracker.update(detections)
 
         # ACTION DETECTOR
-        for i, track in enumerate(tracker.tracks):
+        for _, track in enumerate(tracker.tracks):
             if not track.is_confirmed():
                 continue
             track_id = track.track_id

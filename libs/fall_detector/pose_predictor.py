@@ -49,11 +49,7 @@ class BasePosePredictorLoaderMixin:
         return self.predictor
 
 
-class BasedPoseEstimator(BasePosePredictorLoaderMixin):
-    """
-    specify `preprocessor`,  `predictor`, `config`
-    """
-
+class ApplyPrePosProcessorMixin:
     def get_prediction(self, image):
         preprocessor = self.get_preprocessor()
         predictor = self.get_predictor()
@@ -61,3 +57,13 @@ class BasedPoseEstimator(BasePosePredictorLoaderMixin):
         predict_img = preprocessor.preprocess(image=image)
         result = predictor.process(predict_img)
         return result
+
+
+class BasedPoseEstimator(
+    BasePosePredictorLoaderMixin, ApplyPrePosProcessorMixin
+):
+    """
+    specify `preprocessor`,  `predictor`, `config`
+    """
+
+    pass

@@ -144,6 +144,7 @@ class CamLoader_Q:
                     self.Q.put(frames)
             else:
                 with self.Q.mutex:
+                    print("clear queue fulled")
                     self.Q.queue.clear()
             # time.sleep(0.05)
 
