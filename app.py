@@ -41,6 +41,9 @@ class App:
     def _init_stream_track(self):
         class DetectVideoTrack(VideoTransformTrack):
             def process_cv_frame(track_self, frame):
+                import time
+
+                time.sleep(0.02)
                 if self.allow_detection:
                     results = self.detection.process(frame)
                     for result in results:
@@ -48,6 +51,7 @@ class App:
                             result.action
                             == fall_detection.ACTIONS["Fall Down"]
                         ):
+                            # NOTE: Emit Fall Down Event
                             self.fall_emitor.emit_falldown(result)
                         fall_detection.draw_bbox(
                             frame,
@@ -130,7 +134,7 @@ if __name__ == "__main__":
         # cam=utils_cam.CamLoader(0, preprocess=detection_preproc),
     )
 
-    app.set_allow_detection(True)
+    app.set_allow_detection(False)
 
     app.streamer.set_stream_id("1")
     app.streamer.set_username("1")
