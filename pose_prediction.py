@@ -9,6 +9,7 @@ from libs.fall_detector.pose_predictor import (
 )
 import super_gradients
 from super_gradients.common.object_names import Models
+import torch
 import numpy as np
 import cv2
 
@@ -115,8 +116,70 @@ def _draw_connections(frame, keypoints, edges, detection_size=(640, 640)):
 
     for edge, _ in edges.items():
         p1, p2 = edge
-        print(shaped, p1, p2)
         x1, y1, _ = shaped[p1]
         x2, y2, _ = shaped[p2]
 
         cv2.line(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 4)
+
+
+class YoloUltralisticPosePredictor(BasePosePredictor):
+    model = None
+    device = "cpu"
+
+    def setup(self):
+        from ultralytics import YOLO
+
+        self.model = getattr(YOLO("yolov8n-pose"), self.device)()
+
+    def preprocess(self, image):
+        return super().preprocess(image)
+
+    def predict(self, image):
+        prediction = self.model.predict(image)
+        return prediction[0]
+
+    def set_device(self, device):
+        self.device = device
+
+    def postprocess(self, result):
+        conf = result.keypoints.conf
+        keypoints = result.keypoints.xy
+
+        if keypoints.shape[1] == 17:
+            keypoints = np.delete(keypoints, [1, 2, 3, 4], axis=1)
+
+        if conf is not None:
+            conf = np.delete(conf, [1, 2, 3, 4], axis=1)
+            mean_tensor = torch.mean(conf, axis=1)
+            confidence_expanded = conf.unsqueeze(-1).expand_as(
+                keypoints[:, :, :1]
+            )
+
+            keypoints = torch.cat(
+                (keypoints, confidence_expanded), dim=-1
+            ).numpy()
+        else:
+            mean_tensor = np.array([])
+
+        class Prediction:
+            poses = keypoints
+            bboxes_xyxy = result.boxes.xyxy.numpy()
+            scores = mean_tensor
+
+        return Prediction()
+
+
+class YoloUltralisticPoseEstimator(BasedPoseEstimator):
+    preprocessor = ResizeProcessor()
+    predictor = YoloUltralisticPosePredictor()
+    config = YoloConfig()
+
+    @classmethod
+    def new(cls, preprocessor, predictor, config):
+        n = cls()
+        n.config = config
+        n.preprocessor = preprocessor
+        n.predictor = predictor
+
+    def set_predictor_device(self, device):
+        self.predictor.set_device(device)
