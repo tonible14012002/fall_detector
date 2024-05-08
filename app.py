@@ -112,7 +112,9 @@ if __name__ == "__main__":
     device = "cpu"
     config = app_config.init_default_config(device=device)
 
-    detection = fall_detection.init_detection(device=device, config=config)
+    detection = fall_detection.init_ultralistic_detection(
+        device=device, config=config
+    )
     entities = app_entities.Entities.new(
         fall_detector=detection, config=config
     )

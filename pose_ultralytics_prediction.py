@@ -1,5 +1,3 @@
-import super_gradients.training
-import super_gradients.training.models
 from libs.fall_detector.detection import utils
 from libs.fall_detector.config import BaseConfig
 from libs.fall_detector.preprocessor import BasePreprocessor
@@ -7,8 +5,6 @@ from libs.fall_detector.pose_predictor import (
     BasePosePredictor,
     BasedPoseEstimator,
 )
-import super_gradients
-from super_gradients.common.object_names import Models
 import numpy as np
 import cv2
 
@@ -44,50 +40,12 @@ def resize(image, size):
 class YoloConfig(BaseConfig):
     version = "8"
     size = (640, 640)
-    tensorrt_version = "8.5.2"
     pretrain_weights = "coco_pose"
-    model_name = Models.YOLO_NAS_POSE_S
-
-
-class YoloPosePredictor(BasePosePredictor):
-    config = YoloConfig
-    model = None
-    device = "cpu"  # cuda
-
-    def set_device(self, device):
-        self.device = device
-
-    def postprocess(self, result):
-        prediction = result.prediction
-
-        keypoints = prediction.poses
-        prediction.poses = np.delete(keypoints, [1, 2, 3, 4], axis=1)
-
-        return prediction
-
-    def predict(self, image):
-        return self.model.predict(image)
-
-    def setup(self):
-        self.model = super_gradients.training.models.get(
-            self.config.model_name,
-            pretrained_weights=self.config.pretrain_weights,
-        )
-        getattr(self.model, self.device)()
 
 
 class ResizeProcessor(BasePreprocessor):
     def preprocess(self, image):
         return resize(image, YoloConfig.size)
-
-
-class YoloBasedPoseEstimator(BasedPoseEstimator):
-    preprocessor = ResizeProcessor()
-    predictor = YoloPosePredictor()
-    config = YoloConfig()
-
-    def set_predictor_device(self, device):
-        self.predictor.set_device(device)
 
 
 def draw_poses(frame, pose, detection_size=(640, 640)):
@@ -234,6 +192,8 @@ class YoloUltralisticPosePredictor(BasePosePredictor):
 
         result_keypoints = np.array(result_keypoints)
         results_conf = np.array(results_conf)
+
+        print(result_keypoints.shape)
 
         class Prediction:
             poses = result_keypoints
