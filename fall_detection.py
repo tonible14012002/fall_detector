@@ -1,8 +1,18 @@
 from libs.fall_detector.tracker import Tracker, Detection
 from libs.fall_detector.detection import detector
 from libs.fall_detector.detection import utils
-from pose_prediction import (
-    YoloBasedPoseEstimator,
+from libs.fall_detector.pose_predictor import (
+    BasedPoseEstimator,
+)
+
+# from pose_prediction import ( # super_gradients dependency
+#     YoloBasedPoseEstimator,
+#     YoloUltralisticPoseEstimator,
+#     draw_poses,
+# )
+from pose_ultralytics_prediction import (
+    YoloUltralisticPoseEstimator,
+    draw_poses,
 )
 import cv2
 import config as app_config
@@ -25,6 +35,7 @@ class ActionDetector:
     tracker = None
     action_model: detector.TSSTG = None
     config: app_config.AppConfig = None
+    loss_track_count = 0
 
     class Result:
         track_id = None
@@ -166,14 +177,14 @@ class FallDownEventEmitor:
 
 
 class FallDetection:
-    pose_estimator: YoloBasedPoseEstimator = None
+    pose_estimator: BasedPoseEstimator = None
     action_detector: ActionDetector = None
 
     @classmethod
     def new(
         cls,
         action_detector: ActionDetector,
-        pose_estimator: YoloBasedPoseEstimator,
+        pose_estimator: BasedPoseEstimator,
     ):
         f = cls()
         f.action_detector = action_detector
@@ -189,22 +200,22 @@ class FallDetection:
         return results
 
 
-def init_detection(device, config: app_config.AppConfig) -> FallDetection:
-    pose_estimator = YoloBasedPoseEstimator()
-    pose_estimator.set_predictor_device(device=device)
+# def init_detection(device, config: app_config.AppConfig) -> FallDetection:
+#     pose_estimator = YoloBasedPoseEstimator()
+#     pose_estimator.set_predictor_device(device=device)
 
-    fall_detection = FallDetection.new(
-        action_detector=ActionDetector.new(
-            config=config,
-            tracker=Tracker(max_age=30, max_iou_distance=0.7, n_init=3),
-            action_model=detector.TSSTG(
-                device=device,
-            ),
-        ),
-        pose_estimator=pose_estimator,
-    )
+#     fall_detection = FallDetection.new(
+#         action_detector=ActionDetector.new(
+#             config=config,
+#             tracker=Tracker(max_age=30, max_iou_distance=0.7, n_init=3),
+#             action_model=detector.TSSTG(
+#                 device=device,
+#             ),
+#         ),
+#         pose_estimator=pose_estimator,
+#     )
 
-    return fall_detection
+#     return fall_detection
 
 
 def draw_bbox(frame, bbox, track_id, action, center, confidence):
@@ -243,6 +254,53 @@ def draw_bbox(frame, bbox, track_id, action, center, confidence):
     )
 
 
+class FallDetectionUltralistic(FallDetection):
+    pose_estimator: YoloUltralisticPoseEstimator = None
+    action_detector: ActionDetector = None
+
+    @classmethod
+    def new(
+        cls,
+        action_detector: ActionDetector,
+        pose_estimator: YoloUltralisticPoseEstimator,
+    ):
+        f = cls()
+        f.action_detector = action_detector
+        f.pose_estimator = pose_estimator
+        return f
+
+    def process(self, image):
+        prediction = self.pose_estimator.get_prediction(image)
+        for pose in prediction.poses:
+            try:
+                draw_poses(image, pose)
+            except:  # noqa
+                pass
+        results = self.action_detector.process(
+            prediction.poses, prediction.bboxes_xyxy, prediction.scores
+        )
+        return results
+
+
+def init_ultralistic_detection(
+    device, config: app_config.AppConfig
+) -> FallDetection:
+    pose_estimator = YoloUltralisticPoseEstimator()
+    pose_estimator.set_predictor_device(device=device)
+
+    fall_detection = FallDetectionUltralistic.new(
+        action_detector=ActionDetector.new(
+            config=config,
+            tracker=Tracker(max_age=30, max_iou_distance=0.7, n_init=3),
+            action_model=detector.TSSTG(
+                device=device,
+            ),
+        ),
+        pose_estimator=pose_estimator,
+    )
+    return fall_detection
+
+
 if __name__ == "__main__":
 
     def preproc(image):
@@ -254,9 +312,10 @@ if __name__ == "__main__":
 
     test_device = "cpu"
     config = app_config.AppConfig()
-    fall_detection = init_detection(test_device, config)
+    # fall_detection = init_detection(test_device, config)
+    fall_detection = init_ultralistic_detection(test_device, config)
     cam = CamLoader_Q(
-        "./scripts/samples/fall-vid.mp4", queue_size=10000, preprocess=preproc
+        "./test-samples/sample3.mp4", queue_size=10000, preprocess=preproc
     ).start()
 
     import time
