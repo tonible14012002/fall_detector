@@ -9,7 +9,7 @@ __pycache__/
 *.pth
 # C extensions
 *.so
-# .python-version
+.python-version
 
 # Distribution / packaging
 .Python
