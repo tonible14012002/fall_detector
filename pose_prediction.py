@@ -254,6 +254,7 @@ class YoloUltralisticPoseEstimator(BasedPoseEstimator):
         n.config = config
         n.preprocessor = preprocessor
         n.predictor = predictor
+        return n
 
     def set_predictor_device(self, device):
         self.predictor.set_device(device)

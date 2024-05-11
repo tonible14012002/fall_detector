@@ -6,8 +6,10 @@ __pycache__/
 *$py.class
 
 *.pt
+*.pth
 # C extensions
 *.so
+# .python-version
 
 # Distribution / packaging
 .Python
