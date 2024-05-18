@@ -1,11 +1,13 @@
 import entities as app_entities
-import streamer as app_streamer
+from libs.fall_detector.detection import detector
+from libs.fall_detector.tracker import Tracker
+import libs.streamer as app_streamer
 import config as app_config
 from utils import cam as utils_cam
-from utils.resize_preproc import detection_preproc
+from utils.resize_preproc import resize_bgr2rgb_preproc
 from typing_extensions import Union
 from video_track import VideoTransformTrack
-import fall_detection
+import libs.fall_detection as fall_detection
 import cv2
 import time
 
@@ -107,14 +109,54 @@ class App:
         self.streamer.start()
 
 
-if __name__ == "__main__":
+def init_yolonas_falldetector(
+    config: app_config.AppConfig,
+) -> fall_detection.FallDetection:
+    from libs.utils.yoloposenas import new_yolovnas_pose_estimator
 
+    pose_estimator = new_yolovnas_pose_estimator(device=config.device)
+    return fall_detection.FallDetection.new(
+        action_detector=fall_detection.ActionDetector.new(
+            config=config,
+            tracker=Tracker(max_age=30, max_iou_distance=0.7, n_init=3),
+            action_model=detector.TSSTG(device=config.device),
+        ),
+        pose_estimator=pose_estimator,
+    )
+
+
+def init_yolov8_falldetector(
+    config: app_config.AppConfig,
+) -> fall_detection.FallDetection:
+    from libs.utils.yolov8 import new_yolov8_pose_estimator
+
+    pose_estimator = new_yolov8_pose_estimator(device=config.device)
+    return fall_detection.FallDetection.new(
+        action_detector=fall_detection.ActionDetector.new(
+            config=config,
+            tracker=Tracker(max_age=30, max_iou_distance=0.7, n_init=3),
+            action_model=detector.TSSTG(
+                device=config.device,
+            ),
+        ),
+        pose_estimator=pose_estimator,
+    )
+
+
+if __name__ == "__main__":
     device = "cpu"
+    backer = "yolov8"  # "yolov8" or "yolonas" # "trt_pose"
+
     config = app_config.init_default_config(device=device)
 
-    detection = fall_detection.init_ultralistic_detection(
-        device=device, config=config
-    )
+    if backer == "yolov8":
+        detection = init_yolov8_falldetector(config=config)
+    if backer == "yolonas":
+        detection = init_yolonas_falldetector(config=config)
+    else:
+        # Default to yolov8
+        detection = init_yolov8_falldetector(config=config)
+
     entities = app_entities.Entities.new(
         fall_detector=detection, config=config
     )
@@ -124,16 +166,13 @@ if __name__ == "__main__":
         entities=entities,
         streamer=streamer,
         detection=detection,
-        cam=utils_cam.CamLoader_Q(
-            config.video_src,
-            queue_size=10000,
-            preprocess=detection_preproc,
+        cam=utils_cam.CamLoader(
+            0,
+            preprocess=resize_bgr2rgb_preproc,
         ),
-        # cam=utils_cam.CamLoader(0, preprocess=detection_preproc),
     )
 
     app.set_allow_detection(True)
-
     app.streamer.set_stream_id("1")
     app.streamer.set_username("1")
     app.init()

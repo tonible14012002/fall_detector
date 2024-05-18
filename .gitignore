@@ -1,9 +1,13 @@
 
 fall_detector/detection/models_pth/*
 # Byte-compiled / optimized / DLL files
+_videos/
 __pycache__/
 *.py[cod]
 *$py.class
+
+torch2trt
+trt_pose
 
 *.pt
 *.pth

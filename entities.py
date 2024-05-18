@@ -1,5 +1,5 @@
 import config as app_config
-import fall_detection
+import libs.fall_detection as fall_detection
 
 
 class Entities:

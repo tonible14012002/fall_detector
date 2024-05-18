@@ -2,9 +2,26 @@ from .preprocessor import BasePreprocessor
 
 
 class BasePosePredictor:
+    device = "cpu"
+
+    class PoseResults:
+        poses = []  # (x,y) 13 keypoints (ignore 1,2,3,4 eyes, ears keypoints)
+        bboxes_xyxy = []  # (x1, y1, x2, y2) bounding box
+        scores = []  # confidence score of each poses
+
+        def __init__(self, poses, bboxes_xyxy, scores) -> None:
+            self.poses = poses
+            self.bboxes_xyxy = bboxes_xyxy
+            self.scores = scores
+
     def __init__(self) -> None:
         self.setup()
         super().__init__()
+
+    def set_device(self, device="cpu"):
+        if device not in ["cpu", "cuda"]:
+            raise Exception("Invalid Device 'cuda' or 'cpu' only")
+        self.device = device
 
     def setup(self):
         """
@@ -29,7 +46,7 @@ class BasePosePredictor:
     def preprocess(self, image):
         return image
 
-    def postprocess(self, result):
+    def postprocess(self, result) -> PoseResults:
         return result
 
 

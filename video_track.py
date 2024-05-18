@@ -1,13 +1,9 @@
 from aiortc.mediastreams import MediaStreamTrack
 import cv2
 from av import VideoFrame
-from pose_prediction import YoloBasedPoseEstimator
 from libs.fall_detector.detection import utils
 from utils.cam import CamLoader_Q, CamLoader
 from typing import Union
-
-pose_estimator = YoloBasedPoseEstimator()
-pose_estimator.set_predictor_device(device="cpu")
 
 
 def preproc(image):
