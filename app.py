@@ -109,6 +109,22 @@ class App:
         self.streamer.start()
 
 
+def init_trtpose_falldetector(
+    config: app_config.AppConfig,
+) -> fall_detection.FallDetection:
+    from libs.utils.posetrt import new_trt_pose_estimator
+
+    pose_estimator = new_trt_pose_estimator()
+    return fall_detection.FallDetection.new(
+        action_detector=fall_detection.ActionDetector.new(
+            config=config,
+            tracker=Tracker(max_age=30, max_iou_distance=0.7, n_init=3),
+            action_model=detector.TSSTG(device=config.device),
+        ),
+        pose_estimator=pose_estimator,
+    )
+
+
 def init_yolonas_falldetector(
     config: app_config.AppConfig,
 ) -> fall_detection.FallDetection:
@@ -155,7 +171,7 @@ if __name__ == "__main__":
         detection = init_yolonas_falldetector(config=config)
     else:
         # Default to yolov8
-        detection = init_yolov8_falldetector(config=config)
+        detection = init_trtpose_falldetector(config=config)
 
     entities = app_entities.Entities.new(
         fall_detector=detection, config=config

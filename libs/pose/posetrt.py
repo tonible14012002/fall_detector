@@ -48,17 +48,9 @@ class TrtPosePredictor(BasePosePredictor):
     torch_device = None
     parse_objects = None
     draw_objects = None
-    config = None
-
-    @classmethod
-    def new(cls, config, device="cuda"):
-        n = cls()
-        n.config = config
-        n.device = device
-        return n
 
     def setup(self):
-        with open("human_pose.json", "r") as f:
+        with open("./human_pose.json", "r") as f:
             human_pose = json.load(f)
 
         topology = trt_pose.coco.coco_category_to_topology(human_pose)
