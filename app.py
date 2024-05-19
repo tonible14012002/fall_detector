@@ -167,7 +167,7 @@ if __name__ == "__main__":
 
     if backer == "yolov8":
         detection = init_yolov8_falldetector(config=config)
-    if backer == "yolonas":
+    elif backer == "yolonas":
         detection = init_yolonas_falldetector(config=config)
     else:
         # Default to yolov8
@@ -182,8 +182,9 @@ if __name__ == "__main__":
         entities=entities,
         streamer=streamer,
         detection=detection,
-        cam=utils_cam.CamLoader(
-            0,
+        cam=utils_cam.CamLoader_Q(
+            "./scripts/samples/fall-vid.mp4",
+            queue_size=10000,
             preprocess=resize_bgr2rgb_preproc,
         ),
     )
