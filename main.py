@@ -1,4 +1,4 @@
-from lib.cam import CamLoader, CamLoader_Q
+from lib_cam.cam import CamLoader, CamLoader_Q
 from fall_detector.detection import utils
 from fall_detector import pose
 from fall_detector.tracker import Tracker, Detection, utils as tracker_utils
@@ -171,6 +171,7 @@ if __name__ == "__main__":
             1,
         )
 
+        frame = cv2.resize(frame, (640, 480))
         frame = frame[:, :, ::-1]
 
         fps_time = time.time()

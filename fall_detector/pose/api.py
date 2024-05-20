@@ -26,7 +26,7 @@ def is_valid_size(w, h):
     return w % 32 == 0 and h % 32 == 0
 
 
-def cast_cv2_img_to_tf_tensor(image, size: tuple[int, int]):
+def cast_cv2_img_to_tf_tensor(image, size):
     """
     image: cv2 image
     size: (x, y)
@@ -43,7 +43,7 @@ def cast_cv2_img_to_tf_tensor(image, size: tuple[int, int]):
 
 def load_model():
     model = tf_hub.load(
-        "https://tfhub.dev/google/movenet/multipose/lightning/1"
+        "https://www.kaggle.com/models/google/movenet/TensorFlow2/multipose-lightning/1"
     )
     return model.signatures["serving_default"]
 
@@ -89,7 +89,7 @@ class PoseEstimator:
 
     def load_model(self):
         self.model = tf_hub.load(
-            "https://tfhub.dev/google/movenet/multipose/lightning/1"
+            "https://www.kaggle.com/models/google/movenet/TensorFlow2/multipose-lightning/1"
         ).signatures["serving_default"]
 
     def cast_to_tf_tensor(self, image):
