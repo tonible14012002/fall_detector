@@ -6,6 +6,9 @@ from libs.fall_detector.preprocessor import BasePreprocessor
 import tensorflow_hub as tf_hub
 import tensorflow as tf
 import numpy as np
+import pathlib
+
+BASEDIR = pathlib.Path(__file__).parent.parent.parent
 
 
 def cast_to_tf_tensor(image, size):
@@ -40,8 +43,8 @@ class MovenetPosePredictor(BasePosePredictor):
         self.size = size
 
     def setup(self):
-        self.model = tf_hub.load(
-            "https://www.kaggle.com/models/google/movenet/TensorFlow2/multipose-lightning/1"
+        self.model = tf.saved_model.load(
+            BASEDIR / "libs/fall_detector/detection/models_pth/movenet"
         ).signatures["serving_default"]
 
     def preprocess(self, image):
