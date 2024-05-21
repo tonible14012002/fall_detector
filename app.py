@@ -4,8 +4,11 @@ from libs.fall_detector.tracker import Tracker
 import libs.streamer as app_streamer
 import config as app_config
 from utils import cam as utils_cam
-from utils.resize_preproc import resize_bgr2rgb_preproc
-from typing_extensions import Union
+from utils.resize_preproc import (
+    resize_bgr2rgb_preproc,
+    resize384_bgr2rgb_preproc,
+)
+from typing import Union
 from video_track import VideoTransformTrack
 import libs.fall_detection as fall_detection
 import cv2
@@ -125,6 +128,25 @@ def init_trtpose_falldetector(
     )
 
 
+def init_movenet_falldetector(
+    config: app_config.AppConfig,
+):
+    pass
+    from libs.utils.pose_movenet import new_movenet_pose_estimator
+
+    pose_estimator = new_movenet_pose_estimator(
+        device=config.device, size=config.detection_size
+    )
+    return fall_detection.FallDetection.new(
+        action_detector=fall_detection.ActionDetector.new(
+            config=config,
+            tracker=Tracker(max_age=30, max_iou_distance=0.7, n_init=3),
+            action_model=detector.TSSTG(device=config.device),
+        ),
+        pose_estimator=pose_estimator,
+    )
+
+
 def init_yolonas_falldetector(
     config: app_config.AppConfig,
 ) -> fall_detection.FallDetection:
@@ -161,17 +183,45 @@ def init_yolov8_falldetector(
 
 if __name__ == "__main__":
     device = "cpu"
-    backer = "yolov8"  # "yolov8" or "yolonas" # "trt_pose"
-
-    config = app_config.init_default_config(device=device)
+    backer = "movenet"  # "yolov8" | "yolonas"| "trt_pose" | "movenet"
 
     if backer == "yolov8":
+        config = app_config.init_default_config(device=device)
+        config.detection_size = (640, 640)
         detection = init_yolov8_falldetector(config=config)
+        cam = utils_cam.CamLoader_Q(
+            "./scripts/samples/fall-vid.mp4",
+            queue_size=10000,
+            preprocess=resize_bgr2rgb_preproc,
+        )
     elif backer == "yolonas":
+        config = app_config.init_default_config(device=device)
+        config.detection_size = (640, 640)
         detection = init_yolonas_falldetector(config=config)
-    else:
+        cam = utils_cam.CamLoader_Q(
+            "./scripts/samples/fall-vid.mp4",
+            queue_size=10000,
+            preprocess=resize_bgr2rgb_preproc,
+        )
+    elif backer == "movenet":
         # Default to yolov8
+        config = app_config.init_default_config(device=device)
+        config.detection_size = (384, 384)
+        detection = init_movenet_falldetector(config=config)
+        cam = utils_cam.CamLoader_Q(
+            "./scripts/samples/fall-vid.mp4",
+            queue_size=10000,
+            preprocess=resize384_bgr2rgb_preproc,
+        )
+    else:
+        config = app_config.init_default_config(device=device)
+        config.detection_size = (224, 224)
         detection = init_trtpose_falldetector(config=config)
+        cam = utils_cam.CamLoader_Q(
+            "./scripts/samples/fall-vid.mp4",
+            queue_size=10000,
+            preprocess=resize_bgr2rgb_preproc,  # update 224 resizer
+        )
 
     entities = app_entities.Entities.new(
         fall_detector=detection, config=config
@@ -179,14 +229,7 @@ if __name__ == "__main__":
 
     streamer = app_streamer.init_streamer(entities=entities)
     app = App.new(
-        entities=entities,
-        streamer=streamer,
-        detection=detection,
-        cam=utils_cam.CamLoader_Q(
-            "./scripts/samples/fall-vid.mp4",
-            queue_size=10000,
-            preprocess=resize_bgr2rgb_preproc,
-        ),
+        entities=entities, streamer=streamer, detection=detection, cam=cam
     )
 
     app.set_allow_detection(True)

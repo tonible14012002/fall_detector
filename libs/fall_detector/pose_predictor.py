@@ -3,6 +3,7 @@ from .preprocessor import BasePreprocessor
 
 class BasePosePredictor:
     device = "cpu"
+    size = (640, 640)
 
     class PoseResults:
         poses = []  # (x,y) 13 keypoints (ignore 1,2,3,4 eyes, ears keypoints)
@@ -33,8 +34,8 @@ class BasePosePredictor:
         """
         return: poses (6, 17, 3) - (poses), (keypoints), (y, x, confidence)
         """
-        self.preprocess(image)
-        result = self.predict(image)
+        resulst = self.preprocess(image)
+        result = self.predict(resulst)
         return self.postprocess(result=result)
 
     def predict(self, image):
@@ -82,5 +83,3 @@ class BasedPoseEstimator(
     """
     specify `preprocessor`,  `predictor`, `config`
     """
-
-    pass
