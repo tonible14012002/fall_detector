@@ -54,6 +54,8 @@ class MovenetPosePredictor(BasePosePredictor):
         return super().postprocess(result)
 
     def predict(self, pose_input):
+        import time
+
         results = self.model(pose_input)
         keypoints = results["output_0"].numpy()[:, :, :51].reshape((6, 17, 3))
         keypoints = tf.concat(

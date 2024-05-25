@@ -122,7 +122,7 @@ class ActionDetector:
 class FallDownEventEmitor:
     _callbacks = []
     _to_remove_event: "list[ToRemoveEvent]" = []
-    max_age = 10  # frames
+    max_age = 40  # frames
 
     class ToRemoveEvent:
         id: str = None
@@ -146,7 +146,7 @@ class FallDownEventEmitor:
         self._callbacks.append(func)
         return func
 
-    def emit_falldown(self, result: ActionDetector.Result):
+    def emit_falldown(self, result: ActionDetector.Result, image=None):
         """
         Embed this function in to event loop
         """
@@ -162,7 +162,7 @@ class FallDownEventEmitor:
         )
 
         for callback in self._callbacks:
-            callback(result)
+            callback(result, image)
 
 
 class FallDetection:

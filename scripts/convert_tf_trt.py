@@ -123,7 +123,4 @@ def convert(model_code: str, precision_mode: str, workspace_size: int) -> None:
 
 if __name__ == "__main__":
     """Main entry point for converting TF to TRT"""
-    # Use FP16 'coz INT8 requires special training and is generally not directly usable.
-    # Default to use 1GB of GPU RAM for TRT workspace.
-    # (testing with >= 2GB doesn't increase model FPS on available hardware)
     convert("MPL", "FP16", GPU_RAM_1G)

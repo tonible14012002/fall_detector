@@ -16,7 +16,6 @@ from libs.fall_detector.pose_predictor import (
     BasedPoseEstimator,
 )
 from libs.fall_detector.preprocessor import BasePreprocessor
-from libs.fall_detector.detection import utils
 
 TRTModule = None
 torch2trt = None
@@ -135,7 +134,8 @@ class TrtPosePredictor(BasePosePredictor):
         print("===== NET FPS :%f =====" % (netfps))
         return _kpoint
 
-    def postprocess(self, result):
+    def postprocess(self, keypoints):
+
         return self.PoseResults(poses=[], bboxes_xyxy=[], scores=[])
 
 

@@ -7,12 +7,35 @@ from utils import cam as utils_cam
 from utils.resize_preproc import (
     resize_bgr2rgb_preproc,
     resize384_bgr2rgb_preproc,
+    resize224_bgr2rgb_preproc,
 )
 from typing import Union
 from video_track import VideoTransformTrack
 import libs.fall_detection as fall_detection
 import cv2
 import time
+
+from pynput import keyboard
+import threading
+
+
+# def on_press(key):
+#     try:
+#         if key.char == "a":
+#             print('Key "a" was pressed')
+#     except AttributeError:
+#         pass
+
+
+# # Setting up the listener
+
+
+# def start_listener():
+#     with keyboard.Listener(on_press=on_press) as listener:
+#         listener.join()
+
+
+# threading.Thread(target=start_listener).start()
 
 
 class FpsCounter:
@@ -46,14 +69,11 @@ class App:
     def _init_stream_track(self):
         class DetectVideoTrack(VideoTransformTrack):
             def process_cv_frame(track_self, frame):
+
                 if self.allow_detection:
                     results = self.detection.process(frame)
                     for result in results:
-                        if (
-                            result.action
-                            == fall_detection.ACTIONS["Fall Down"]
-                        ):
-                            self.fall_emitor.emit_falldown(result)
+
                         fall_detection.draw_bbox(
                             frame,
                             result.bbox,
@@ -62,6 +82,11 @@ class App:
                             result.center,
                             result.confidence,
                         )
+                        if (
+                            result.action
+                            == fall_detection.ACTIONS["Fall Down"]
+                        ):
+                            self.fall_emitor.emit_falldown(result, frame)
                 frame = cv2.putText(
                     frame,
                     "FPS: %.2f" % self.fps_counter.get_fps(),
@@ -104,9 +129,35 @@ class App:
     def _register_events(self):
         # Register on Falling Down callback
         @self.fall_emitor.on_falldown
-        def fire_noty(result: fall_detection.ActionDetector.Result):
-            # Implement Firebase Notification
+        def fire_noty(
+            result: fall_detection.ActionDetector.Result, image=None
+        ):
             print("FALL DOWN", result.track_id)
+            import threading
+
+            threading.Thread(
+                target=self._handle_falldown, args=(image,)
+            ).start()
+            # Implement Firebase Notification
+
+    def _handle_falldown(self, image):
+        import requests
+        import base64
+
+        img_bytes = cv2.imencode(".jpg", image)[1].tobytes()
+        jpg_as_text = base64.b64encode(img_bytes)
+
+        print(jpg_as_text)
+        url = "http://192.168.1.197:4000/fall-notify"
+
+        resp = requests.post(
+            url=url,
+            json={
+                "image": jpg_as_text.decode("utf-8"),
+                "deviceSerial": "AAA-BBB-CCC-EEE",
+            },
+        )
+        print("received", resp.text)
 
     def start(self):
         self.streamer.start()
@@ -209,7 +260,7 @@ if __name__ == "__main__":
         config.detection_size = (384, 384)
         detection = init_movenet_falldetector(config=config)
         cam = utils_cam.CamLoader_Q(
-            "./scripts/samples/fall-vid.mp4",
+            "./scripts/samples/fall-test.mp4",
             queue_size=10000,
             preprocess=resize384_bgr2rgb_preproc,
         )
@@ -218,10 +269,16 @@ if __name__ == "__main__":
         config.detection_size = (224, 224)
         detection = init_trtpose_falldetector(config=config)
         cam = utils_cam.CamLoader_Q(
-            "./scripts/samples/fall-vid.mp4",
+            "./scripts/samples/fall-test.mp4",
             queue_size=10000,
-            preprocess=resize_bgr2rgb_preproc,  # update 224 resizer
+            preprocess=resize224_bgr2rgb_preproc,  # update 224 resizer
         )
+
+    # cam = utils_cam.CamLoader(
+    #     0,
+    #     # queue_size=10000,
+    #     preprocess=resize384_bgr2rgb_preproc,  # update 224 resizer
+    # )
 
     entities = app_entities.Entities.new(
         fall_detector=detection, config=config
