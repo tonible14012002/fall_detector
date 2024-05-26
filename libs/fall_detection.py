@@ -123,6 +123,7 @@ class FallDownEventEmitor:
     _callbacks = []
     _to_remove_event: "list[ToRemoveEvent]" = []
     max_age = 40  # frames
+    min_age = 4
 
     class ToRemoveEvent:
         id: str = None
@@ -155,14 +156,13 @@ class FallDownEventEmitor:
             event.age += 1
             if event.age > self.max_age:
                 self._to_remove_event.remove(event)
-            return
+            elif event.age == self.min_age:
+                for callback in self._callbacks:
+                    callback(result, image)
 
         self._to_remove_event.append(
             self.ToRemoveEvent(id=result.track_id, age=0)
         )
-
-        for callback in self._callbacks:
-            callback(result, image)
 
 
 class FallDetection:

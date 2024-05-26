@@ -85,6 +85,7 @@ class App:
                         if (
                             result.action
                             == fall_detection.ACTIONS["Fall Down"]
+                            and result.confidence > 0.35
                         ):
                             self.fall_emitor.emit_falldown(result, frame)
                 frame = cv2.putText(
