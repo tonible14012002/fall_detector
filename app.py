@@ -133,8 +133,6 @@ class App:
             result: fall_detection.ActionDetector.Result, image=None
         ):
             print("FALL DOWN", result.track_id)
-            import threading
-
             threading.Thread(
                 target=self._handle_falldown, args=(image,)
             ).start()
@@ -146,15 +144,13 @@ class App:
 
         img_bytes = cv2.imencode(".jpg", image)[1].tobytes()
         jpg_as_text = base64.b64encode(img_bytes)
-
-        print(jpg_as_text)
         url = "http://192.168.1.197:4000/fall-notify"
 
         resp = requests.post(
             url=url,
             json={
                 "image": jpg_as_text.decode("utf-8"),
-                "deviceSerial": "AAA-BBB-CCC-EEE",
+                "deviceSerial": "AAA-CCC-EEE",
             },
         )
         print("received", resp.text)
