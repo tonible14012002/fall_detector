@@ -15,7 +15,6 @@ import libs.fall_detection as fall_detection
 import cv2
 import time
 
-from pynput import keyboard
 import threading
 
 
@@ -151,7 +150,7 @@ class App:
             url=url,
             json={
                 "image": jpg_as_text.decode("utf-8"),
-                "deviceSerial": "AAA-CCC-EEE",
+                "deviceSerial": "SDF-SDF-SDF",
             },
         )
         print("received", resp.text)
@@ -179,7 +178,6 @@ def init_trtpose_falldetector(
 def init_movenet_falldetector(
     config: app_config.AppConfig,
 ):
-    pass
     from libs.utils.pose_movenet import new_movenet_pose_estimator
 
     pose_estimator = new_movenet_pose_estimator(
@@ -257,7 +255,7 @@ if __name__ == "__main__":
         config.detection_size = (384, 384)
         detection = init_movenet_falldetector(config=config)
         cam = utils_cam.CamLoader_Q(
-            "./scripts/samples/fall-test.mp4",
+            "./scripts/samples/test-lying-on-table.mp4",
             queue_size=10000,
             preprocess=resize384_bgr2rgb_preproc,
         )

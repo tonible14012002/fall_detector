@@ -4,7 +4,7 @@ ICE_SERVERS = [
     "stun:stun2.l.google.com:19302",
 ]
 DEFAULT_DETECTION_SIZE = (640, 640)
-VIDEO_SRC = "./test-samples/sample7.mp4"
+VIDEO_SRC = "./test-samples/test-2-people.mp4"
 DEVICE_ID = "1"
 
 
